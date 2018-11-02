@@ -1,4 +1,4 @@
-﻿//	Copyright (c) 2016 steele of lowkeysoft.com
+﻿﻿//	Copyright (c) 2016 steele of lowkeysoft.com
 //        http://lowkeysoft.com
 //
 //	This software is provided 'as-is', without any express or implied warranty. In

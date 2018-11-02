@@ -1,4 +1,4 @@
-﻿//	Copyright (c) 2016 steele of lowkeysoft.com
+﻿﻿//	Copyright (c) 2016 steele of lowkeysoft.com
 //        http://lowkeysoft.com
 //
 //	This software is provided 'as-is', without any express or implied warranty. In
@@ -29,6 +29,8 @@ using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net;
+using System.Web;
+
 
 [RequireComponent (typeof (AudioSource))]
 
@@ -122,7 +124,8 @@ public class GoogleVoiceSpeech : MonoBehaviour {
 										Directory.CreateDirectory(Path.GetDirectoryName(filePath));
 										SavWav.Save (filePath, goAudioSource.clip); //Save a temporary Wav File
 										Debug.Log( "Saving @ " + filePath);
-										string apiURL = "http://www.google.com/speech-api/v2/recognize?output=json&lang=en-us&key=" + apiKey;
+										//Insert your API KEY here.
+										string apiURL = "https://speech.googleapis.com/v1/speech:recognize?&key=";
 										string Response;
 
 										Debug.Log( "Uploading " + filePath);
@@ -158,49 +161,58 @@ public class GoogleVoiceSpeech : MonoBehaviour {
 				}
 		}
 
-		public string HttpUploadFile(string url, string file, string paramName, string contentType) {
-				Debug.Log(string.Format("Uploading {0} to {1}", file, url));
-				HttpWebRequest wr = (HttpWebRequest)WebRequest.Create(url);
-				wr.ContentType = "audio/l16; rate=44100";
-				wr.Method = "POST";
-				wr.KeepAlive = true;
-				wr.Credentials = System.Net.CredentialCache.DefaultCredentials;
+    public string HttpUploadFile(string url, string file, string paramName, string contentType) {
 
-				Stream rs = wr.GetRequestStream();
-				FileStream fileStream = new FileStream(file, FileMode.Open, FileAccess.Read);
-				byte[] buffer = new byte[4096];
-				int bytesRead = 0;
-				while ((bytesRead = fileStream.Read(buffer, 0, buffer.Length)) != 0) {
-						rs.Write(buffer, 0, bytesRead);
-				}
-				fileStream.Close();
-				rs.Close();
+        System.Net.ServicePointManager.ServerCertificateValidationCallback += (o, certificate, chain, errors) => true;
+        Debug.Log(string.Format("Uploading {0} to {1}", file, url));
 
-				WebResponse wresp = null;
-				try {
-						wresp = wr.GetResponse();
-						Stream stream2 = wresp.GetResponseStream();
-						StreamReader reader2 = new StreamReader(stream2);
+        Byte[] bytes = File.ReadAllBytes(file);
+        String file64 = Convert.ToBase64String(bytes,
+                                         Base64FormattingOptions.None);
 
-						string responseString =  string.Format("{0}", reader2.ReadToEnd());
-						Debug.Log("HTTP RESPONSE" +responseString);
-						return responseString;
+        Debug.Log(file64);
 
-				} catch(Exception ex) {
-						Debug.Log(string.Format("Error uploading file error: {0}", ex));
-						if(wresp != null) {
-								wresp.Close();
-								wresp = null;
-								return "Error";
-						}
-				} finally {
-						wr = null;
-			
-				}
+        try
+        {
 
-				return "empty";
-		}
-	
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
+            httpWebRequest.ContentType = "application/json";
+            httpWebRequest.Method = "POST";
+
+            using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
+            {
+
+                
+
+
+                string json = "{ \"config\": { \"languageCode\" : \"en-US\" }, \"audio\" : { \"content\" : \"" + file64 + "\"}}";
+
+                Debug.Log(json);
+                streamWriter.Write(json);
+                streamWriter.Flush();
+                streamWriter.Close();
+            }
+
+            var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+            Debug.Log(httpResponse);
+            
+            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+            {
+                var result = streamReader.ReadToEnd();
+                Debug.Log("Response:" + result);
+
+            }
+        
+        } catch (WebException ex) {
+ var resp = new StreamReader(ex.Response.GetResponseStream()).ReadToEnd();
+            Debug.Log(resp);
+ 
+}
+
+
+        return "empty";
+		
+	}
 
 }
 		
